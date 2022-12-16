@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Analyse du {{ date }}{% endblock %}
+{% block body %}
+<h1>Analyse du {{ date }}</h1>
+<ol>
+    {% for cluster in clusters %}
+    <li><a href="{{ url_for('cluster', id=cluster.id) }}">{{ cluster.title }}</a></li>
+    {% endfor %}
+</ol>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Index{% endblock %}
+{% block body %}
+<ol>
+    {% for analyse in analyses %}
+    <li><a href="{{ url_for('analyse', id=analyse.id) }}">{{ analyse.date }}</a></li>
+    {% endfor %}
+<ol>
+{% endblock %}

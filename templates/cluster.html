@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ data.title }}{% endblock %}
+{% block body %}
+<h1>{{ data.title }}</h1>
+    {% if data.description %}
+    <div>{{ data.description }}</div>
+    {% endif %}
+    {% if data.media %}
+    <div><img src="{{ data.media }}" /><div>
+    {% endif %}
+<ol>
+    {% for source in data.sources %}
+    <li>{{ source.source.display_name }} - <a href="{{ source.link }}" target="_blank">{{ source.title }}</a> - {{ source.pubdate }}</li>
+    {% endfor %}
+</ol>
+{% endblock %}
