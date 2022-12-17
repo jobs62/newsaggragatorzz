@@ -8,7 +8,8 @@ import time
 from sklearn.cluster import OPTICS
 import datetime
 import numpy as np
-import bs4
+from bs4 import BeautifulSoup
+import urllib.request
 
 def engine_factory(args):
     engine = create_engine(args.database, echo=args.debug, future=True)
@@ -28,7 +29,6 @@ def importrss(args):
                 news = NewsStream()
                 for arg in line.items():
                     setattr(news, arg[0], arg[1])
-                print(news)
                 session.add(news)
             session.commit()
 
@@ -48,6 +48,7 @@ def sync_stream(stream, session):
         try:
             session.add(news)
             session.commit()
+            print(news)
         except Exception as e:
             print(e)
             session.rollback()
@@ -60,11 +61,10 @@ def parse_entrie(entry):
         #title is one of the most common header, if not present something is fucked
         return None
 
-    print(entry)
     title = entry.title
-    description = getattr(entry, 'summary', title)
-    link = entry.link
-    guid = getattr(entry, 'id', link)
+    description_bs = BeautifulSoup(getattr(entry, 'summary', title))
+    description = description_bs.get_text()
+    guid = getattr(entry, 'id', entry.link)
     pubdate = getattr(entry, 'updated_parsed', None)
     pubdate = getattr(entry, 'created_parsed', pubdate)
     pubdate = getattr(entry, 'published_parsed', pubdate)
@@ -77,6 +77,22 @@ def parse_entrie(entry):
     for elink in entry.links:
         if elink.type.startswith("image/"):
             media = elink.href
+    if media is None:
+        img = description_bs.find("img")
+        if img is not None:
+            media = img.get("link")
+
+    link_as_id = entry.link == guid
+    try:
+        link = get_cannonical_url(entry.link)
+    except urllib.error.HTTPError:
+        # if we are not able to see it, safer not to get it lol
+        return None
+    except urllib.error.URLError:
+        # if we are not able to see it, safer not to get it lol
+        return None
+    if link_as_id:
+        guid = link
 
     return News(
         guid=guid,
@@ -86,6 +102,20 @@ def parse_entrie(entry):
         pubdate=pubdate,
         media=media,
     )
+
+def get_cannonical_url(url):
+    best_link = url
+    opener = urllib.request.build_opener(urllib.request.HTTPRedirectHandler)
+    with opener.open(url) as response:
+        best_link = response.url
+        soup=BeautifulSoup(response.read(), "html.parser")
+        link=soup.find("link", rel="canonical")
+        if link is not None:
+            best_link = link["href"]
+    return clean_link(best_link)
+
+def clean_link(url):
+    return url.split('#')[0].split('?')[0]
 
 def analyse(args):
     engine = engine_factory(args)
